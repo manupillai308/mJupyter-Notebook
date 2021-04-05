@@ -8,4 +8,4 @@ python app.py
 ```
 
 ### Requirements
-* flask
+* flask -  ```pip install flask```
