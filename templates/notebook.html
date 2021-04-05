@@ -1,0 +1,102 @@
+<html>
+    <head>
+        <script>
+            var notebook_name = "{{notebook_name}}";
+            var no_of_codeblocks = 1;
+            var run_count = 0;
+        </script>
+        <style>
+        ::placeholder { /* Most modern browsers support this now. */
+            color:    rgb(0, 0, 0);
+         }
+        </style>
+    </head>
+    <body>
+        <div id="headers" >
+            <div style="display:flex;width: 100%;background-color: rgb(243, 199, 170);">
+                <button style="height:20px;background-color:blue;border:solid blue;border-width: 2px;margin-top:10px;margin-bottom:10px;margin-left:12.5%;color:white;font-weight: bold;" onclick="saveCode()">Save Notebook</button>
+                <button style="height:20px;background-color:blue;border:solid blue;border-width: 2px;margin-top:10px;margin-bottom:10px;margin-left:12.5%;color:white;font-weight: bold;" onclick="stop()">Stop Notebook</button>
+            </div>
+        </div>
+        <div id="codeblocks">
+            <div id="1">
+                <div style="display:flex;align-items: center;justify-content: center;margin-top: 20px; width: 100%;">
+                    <p id="block_exec" style="font-size: 15px;">[]&nbsp;</p>
+                    <textarea id="code" onfocus="setValue(this)" name="code" style="height: 30px;width: 75%;" oninput="onChangeText(this)"></textarea>
+                    <button style="height:35px;background-color:blue;border:solid blue;border-width: 2px;margin-left:10px;color:white;font-weight: bold;" onclick="runCode(1)">Run</button>
+                </div>
+                <div style="display:flex;align-items: center;justify-content: center; width: 100%;">
+                    <div id="output" name="code" style="width: 75%;" hidden></div>
+                </div>
+                <div style="display:flex;align-items: center;justify-content: center; width: 100%;">
+                    <button id="addblock" style="display:flex;align-items: center;justify-content: center;background-color: transparent;border:solid #000;border-width: 1px;" onclick="addCodeBlock()">Code +</button>
+                </div>
+            </div>
+        </div>
+        <script>
+
+            function stop(){
+                fetch("/stop", {method:"POST", body:JSON.stringify({notebook_name}), headers: {'Content-Type': 'application/json'}}).then(data => alert("Notebook Restarted")).catch(e => console.log(e.message));
+            };
+
+            function saveCode(){
+                var head = `<script>
+                                var notebook_name = "${notebook_name}";
+                                var no_of_codeblocks = ${no_of_codeblocks};
+                                var run_count = 0;
+                            <\/script>
+                            <style>
+                            ::placeholder { /* Most modern browsers support this now. */
+                                color :rgb(0, 0, 0);
+                            }
+                            </style>
+                            `
+                fetch("/save", {method:"POST", body:JSON.stringify({head:head, body:document.body.innerHTML, notebook_name}), headers: {'Content-Type': 'application/json'}}).then(data => console.log("document saved!!")).catch(e => console.log(e.message));
+            };
+            function setValue(ele){
+                ele.value = ele.placeholder;
+            };
+            function runCode(childno){
+                run_count += 1;
+                var code = codeblocks.children[childno-1].children[0].children[1].placeholder;
+                codeblocks.children[childno-1].children[0].children[0].innerHTML = "[*]&nbsp;";
+                codeblocks.children[childno-1].children[0].children[2].setAttribute("disabled", true);
+                codeblocks.children[childno-1].children[0].children[2].innerHTML = "Running...";
+                
+                fetch("/run", {method:"POST", body:JSON.stringify({code, notebook_name}), headers: {'Content-Type': 'application/json'}}).then(response => response.json()).then(data => {
+                    codeblocks.children[childno-1].children[1].children[0].innerHTML = data.output;
+                    codeblocks.children[childno-1].children[0].children[0].innerHTML = `[${run_count}]&nbsp;`;
+                    codeblocks.children[childno-1].children[0].children[2].removeAttribute("disabled");
+                    codeblocks.children[childno-1].children[0].children[2].innerHTML = "Run";
+                    codeblocks.children[childno-1].children[1].children[0].removeAttribute("hidden");
+                }).catch(e => console.log(e.message));
+            };
+            function onChangeText(code) {
+                code.style.height = "";
+                code.style.height = code.scrollHeight + "px";
+                code.placeholder = code.value;
+            };
+            function addCodeBlock () {
+                no_of_codeblocks += 1;
+                var newblock = `<div id="${no_of_codeblocks}">
+                                    <div style="display:flex;align-items: center;justify-content: center;margin-top: 20px; width: 100%;" method="GET">
+                                        <p id="block_exec" style="font-size: 15px;">[]&nbsp;</p>
+                                        <textarea id="code" onfocus="setValue(this)" name="code" style="height: 30px;width: 75%;" oninput="onChangeText(this)"></textarea>
+                                        <button style="height:35px;background-color:blue;border:solid blue;border-width: 2px;margin-left:10px;color:white;font-weight: bold;" onclick="runCode(${no_of_codeblocks})">Run</button>
+                                    </div>
+                                    <div style="display:flex;align-items: center;justify-content: center; width: 100%;">
+                                        <div id="output" name="code" style="width: 75%;" hidden></div>
+                                    </div>
+                                    <div style="display:flex;align-items: center;justify-content: center; width: 100%;">
+                                        <button id="addblock" style="display:flex;align-items: center;justify-content: center;background-color: transparent;border:solid #000;border-width: 1px;" onclick="addCodeBlock()">Code +</button>
+                                    </div>
+                                </div>`;
+                var codeblocks = document.getElementById("codeblocks");
+                codeblocks.innerHTML += newblock;
+                var button = codeblocks.children[`${no_of_codeblocks - 2}`].children[2];
+                button.style.display = "none";
+            };
+        </script>
+    </body>
+
+</html>
